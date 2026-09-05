@@ -11,6 +11,7 @@ Run standalone:  python scraper.py
 import re
 import time
 from datetime import datetime
+from urllib.parse import urlparse, parse_qs
 
 import requests
 import feedparser
@@ -79,8 +80,12 @@ FEEDS = [
 # ---------------------------------------------------------------------------
 
 GOOGLE_ALERTS_FEEDS = [
-    # {"name": "Google Alert: scholarship Nigeria",
-    #  "url": "https://www.google.com/alerts/feeds/<id>/<feed-id>"},
+    {"name": "Google Alert: data science internship Nigeria",
+     "url": "https://www.google.com/alerts/feeds/00301591919048987695/14998128405369983341"},
+    {"name": "Google Alert: AI hackathon Africa",
+     "url": "https://www.google.com/alerts/feeds/00301591919048987695/2978852025632999222"},
+    {"name": "Google Alert: tech scholarship Nigeria",
+     "url": "https://www.google.com/alerts/feeds/00301591919048987695/1506777794465253726"},
 ]
 
 FEEDS = FEEDS + GOOGLE_ALERTS_FEEDS
@@ -195,6 +200,20 @@ def _parse_remoteok_json(resp, feed: dict) -> tuple:
     return items, True
 
 
+def _unwrap_google_redirect(url: str) -> str:
+    """Google Alerts wraps every link in its own redirect
+    (google.com/url?...&url=<real destination>&...) rather than
+    linking to the real page directly. Extract the actual destination
+    so we file and extract-checklist-from the real page — otherwise
+    'paste this link back for a full checklist' would be reading
+    Google's redirect wrapper instead of the actual opportunity."""
+    if "google.com/url" not in url:
+        return url
+    qs = parse_qs(urlparse(url).query)
+    real = qs.get("url", [None])[0]
+    return real if real else url
+
+
 def fetch_feed(feed: dict, retries: int = 2) -> tuple:
     """Returns (items, ok). ok=False means this source genuinely
     couldn't be reached or parsed this run — distinct from ok=True
@@ -231,8 +250,8 @@ def fetch_feed(feed: dict, retries: int = 2) -> tuple:
 
     items = []
     for entry in parsed.entries:
-        title = entry.get("title", "").strip()
-        link = entry.get("link", "").strip()
+        title = re.sub(r"<[^>]+>", "", entry.get("title", "")).strip()
+        link = _unwrap_google_redirect(entry.get("link", "").strip())
         raw_desc = entry.get("summary", "") or entry.get("description", "")
         desc = re.sub(r"<[^>]+>", " ", raw_desc)[:500]
         if title and link:
