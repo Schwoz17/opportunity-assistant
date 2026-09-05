@@ -77,6 +77,43 @@ Statuses: `seen → interested → drafting → submitted` (terminal: `rejected`
 
 Scans run at **12:00am, 9:00am, and 4:00pm** daily (server local time), plus on demand with `scan`.
 
+## Email inbox scanning
+
+Many opportunity sources (DevCareer, scholarship mailing lists, most
+newsletters) only ever send email — never RSS. `email_scanner.py`
+checks your inbox on the same 12am/9am/4pm schedule, using Python's
+built-in email tools (no extra package, so it can't hit the same
+"needs a compiler" problem `libsql` did).
+
+**Setup (Gmail):**
+1. Turn on 2-Step Verification if it isn't already: Google Account →
+   Security → 2-Step Verification.
+2. Google Account → Security → 2-Step Verification → **App
+   passwords** → generate one for "Mail". This gives a 16-character
+   password that is DIFFERENT from your real Gmail password — use
+   that here, never your real one.
+3. Add two more variables alongside your existing ones:
+   ```
+   EMAIL_ADDRESS=you@gmail.com
+   EMAIL_APP_PASSWORD=the-16-character-app-password
+   ```
+   (add these to `start.sh` locally, and as Render environment
+   variables when deployed)
+
+Other providers (Outlook, Yahoo, etc.) work the same way with their
+own app-password equivalent — just also set `EMAIL_IMAP_HOST` to
+their IMAP address.
+
+**How it decides what's relevant:** the same scoring/keyword filter
+the RSS scraper uses (`scraper.py`'s `INCLUDE`/`PROFILE_BOOST`/
+`EXCLUDE` lists) — ordinary email gets ignored automatically. The
+first run only checks currently-unread emails, not your whole inbox
+history; every run after that continues from exactly where the last
+one left off.
+
+**Manual test:** send `scanemail` to the bot to check your inbox
+immediately instead of waiting for a scheduled window.
+
 ### Adding "Google" as a general source
 
 Google itself has no public RSS feed, but **Google Alerts** does — this is the free, no-API-key way to fold general Google search into the same pipeline:
