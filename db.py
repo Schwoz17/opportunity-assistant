@@ -220,15 +220,28 @@ class _TursoConnection:
         pass
 
 
+_schema_ready = False
+
+
 def connect():
+    global _schema_ready
     if USE_TURSO:
         conn = _TursoConnection(TURSO_URL, TURSO_TOKEN)
     else:
         conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
-    for stmt in _SCHEMA_STATEMENTS:
-        conn.execute(stmt)
+    if not _schema_ready:
+        # CREATE TABLE IF NOT EXISTS is idempotent, so this only ever
+        # needs to run once per process — repeating it on every single
+        # connect() call was adding 5 unnecessary network round-trips
+        # (one per table) to EVERY database operation once Turso is in
+        # the loop, which multiplies fast: a single /tick run makes
+        # many separate connect() calls (once per Telegram message
+        # processed, once per opportunity checked for reminders, etc.)
+        for stmt in _SCHEMA_STATEMENTS:
+            conn.execute(stmt)
+        _schema_ready = True
     return conn
 
 
@@ -288,6 +301,7 @@ def set_state(key: str, value: str):
     )
     conn.commit()
     conn.close()
+
 
 
 # ---------------------------------------------------------------------------
