@@ -94,7 +94,7 @@ built-in email tools (no extra package, so it can't hit the same
    that here, never your real one.
 3. Add two more variables alongside your existing ones:
    ```
-   EMAIL_ADDRESS=you@gmail.com
+   EMAIL_ADDRESS=my@gmail.com
    EMAIL_APP_PASSWORD=the-16-character-app-password
    ```
    (add these to `start.sh` locally, and as Render environment
